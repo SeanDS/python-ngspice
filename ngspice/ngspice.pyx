@@ -97,7 +97,7 @@ cdef class Session:
         self.session = new NgspiceSession()
 
     def __dealloc__(self):
-        free(self.session)
+        del self.session
 
     def read(self, netlist):
         """Read netlist from string.
