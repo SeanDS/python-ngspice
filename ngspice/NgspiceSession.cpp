@@ -34,20 +34,19 @@ bool NgspiceSession::reinit() {
     return command("destroy all");
 }
 
-bool NgspiceSession::read_netlist(const string& aNetlist) {
-    vector<char*> lines;
-    stringstream ss(aNetlist);
+bool NgspiceSession::read_netlist(const string& netlist) {
+    std::vector<char*> lines;
+    std::string line;
+    stringstream ss(netlist);
 
-    while (!ss.eof()) {
-        char line[1024];
-        ss.getline(line, sizeof(line));
-        lines.push_back(strdup(line));
+    while (std::getline(ss, line, '\n')) {
+        lines.push_back(strdup(line.c_str()));
     }
 
     lines.push_back(nullptr); // ngSpice_Circ wants a null-terminated array.
     ngSpice_Circ(lines.data());
 
-    for (auto line : lines) {
+    for( auto line : lines ) {
         free(line);
     }
 
@@ -70,8 +69,8 @@ bool NgspiceSession::is_running_async() {
     return ngSpice_running();
 }
 
-bool NgspiceSession::command(const string& aCmd) {
-    return ngSpice_Command((char*)aCmd.c_str()) == 0;
+bool NgspiceSession::command(const string& command) {
+    return ngSpice_Command((char*) command.c_str()) == 0;
 }
 
 std::vector<PlotInfo> NgspiceSession::plots() {

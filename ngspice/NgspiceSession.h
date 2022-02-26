@@ -67,8 +67,8 @@ public:
     bool run_async();
     bool stop_async();
     bool is_running_async();
-    bool command(const std::string& aCmd);
-    bool read_netlist(const std::string& aNetlist);
+    bool command(const std::string& command);
+    bool read_netlist(const std::string& netlist);
 
     std::vector<PlotInfo> plots();
     std::vector<PlotVector> plot_vectors(const std::string& plot_type);
