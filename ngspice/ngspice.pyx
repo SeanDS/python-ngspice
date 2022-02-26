@@ -54,10 +54,6 @@ cdef extern from "NgspiceSession.h":
         PlotVector plot_vector(const string&, const string&)
 
 
-cdef extern from "numpy/arrayobject.h":
-    void PyArray_ENABLEFLAGS(np.ndarray arr, int flags)
-
-
 def run(netlist):
     """Run netlist from string with ngspice and return solutions.
 
