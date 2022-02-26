@@ -59,3 +59,9 @@ v1#branch   -3.33e-04
 ## Contributing
 Bug reports and feature requests are always welcome, as are code contributions. Please use the
 project's [issue tracker](https://github.com/SeanDS/python-ngspice/issues).
+
+## Credits
+Sean Leavey <https://github.com/SeanDS/>
+
+Some code for interfacing with ngspice based on KiCad, licenced under GPL. Ngspice has various
+licences. All adapted and statically linked code is compatible with this project's BSD licence.
