@@ -12,6 +12,10 @@
 #include <vector>
 #include <ngspice/sharedspice.h>
 
+
+typedef void (*LogHandler)(std::string);
+
+
 /**
  * Plot vector data and metadata container.
  *
@@ -58,7 +62,7 @@ public:
  */
 class NgspiceSession {
 public:
-    NgspiceSession();
+    NgspiceSession(LogHandler log_handler);
     virtual ~NgspiceSession();
 
     bool init();
@@ -69,17 +73,19 @@ public:
     bool is_running_async();
     bool command(const std::string& command);
     bool read_netlist(const std::string& netlist);
-
     std::vector<PlotInfo> plots();
     std::vector<PlotVector> plot_vectors(const std::string& plot_type);
-    PlotVector& plot_vector(const std::string& plot_type,
-        const std::string& vector_name);
+    PlotVector& plot_vector(const std::string& plot_type, const std::string& vector_name);
 
     void print_data();
     void _add_ngspice_plot(vecinfoall*);
     void _add_ngspice_data(vecvaluesall*);
 
+    void log(std::string message);
+
 private:
+    LogHandler log_handler;
+
     // Ngspice simulation plot and vector data storage; `plots` is keyed by plot
     // type (e.g. 'op1'), `plot_vectors` is keyed by plot type then vector name
     // (e.g. 'n1').
@@ -91,10 +97,8 @@ private:
     static int cb_send_char(char* what, int aId, void* aUser);
     static int cb_send_status(char* what, int aId, void* aUser);
     static int cb_background_thread_running(bool aFinished, int aId, void* aUser);
-    static int cb_controlled_exit(int aStatus, bool aImmediate, bool aExitOnQuit,
-        int aId, void* aUser);
-    static int cb_send_data(vecvaluesall*, int len, int ng_ident,
-        void* userdata);
+    static int cb_controlled_exit(int aStatus, bool aImmediate, bool aExitOnQuit, int aId, void* aUser);
+    static int cb_send_data(vecvaluesall*, int len, int ng_ident, void* userdata);
     static int cb_send_plot_data(vecinfoall*, int ng_ident, void* userdata);
 };
 

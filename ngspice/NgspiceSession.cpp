@@ -2,7 +2,7 @@
 
 using namespace std;
 
-NgspiceSession::NgspiceSession() {
+NgspiceSession::NgspiceSession(LogHandler log_handler) : log_handler(log_handler) {
     bool success;
 
     success = ngSpice_Init(
@@ -159,13 +159,19 @@ void NgspiceSession::_add_ngspice_data(vecvaluesall* vinfo) {
     }
 }
 
+void NgspiceSession::log(std::string message) {
+    (*log_handler)(message);
+}
+
 int NgspiceSession::cb_send_char(char* aWhat, int aId, void* aUser) {
-    printf("Out: %s\n", aWhat);
+    NgspiceSession* sim = reinterpret_cast<NgspiceSession*>(aUser);
+    sim->log((std::string) aWhat);
     return 0;
 }
 
 int NgspiceSession::cb_send_status(char* aWhat, int aId, void* aUser) {
-    printf("Status: %s\n", aWhat);
+    NgspiceSession* sim = reinterpret_cast<NgspiceSession*>(aUser);
+    sim->log((std::string) aWhat);
     return 0;
 }
 

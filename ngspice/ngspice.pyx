@@ -20,9 +20,12 @@ np.import_array()
 
 
 LOGGER = logging.getLogger(__name__)
+CLOGGER = logging.getLogger(f"{__name__}.lib")
 
 
 cdef extern from "NgspiceSession.h":
+    ctypedef void (*LogHandler)(string)
+
     cdef cppclass PlotVector:
         PlotVector(int, string, bool) except +
         int index
@@ -38,7 +41,7 @@ cdef extern from "NgspiceSession.h":
         string type
 
     cdef cppclass NgspiceSession:
-        NgspiceSession() except +
+        NgspiceSession(LogHandler log_handler) except +
         void init()
         void reinit()
         bool run()
@@ -51,6 +54,29 @@ cdef extern from "NgspiceSession.h":
         vector[PlotInfo] plots()
         vector[PlotVector] plot_vectors(string plot_name)
         PlotVector plot_vector(const string&, const string&)
+
+
+cdef _log_handler(string cmessage):
+    message = cmessage.decode()
+
+    # Assign the message a relevant log level.
+    if message.startswith("stderr Fatal error:"):
+        message = message[19:]
+        call = CLOGGER.critical
+    elif message.startswith("stderr Error:"):
+        message = message[13:]
+        call = CLOGGER.error
+    elif message.startswith("stderr Warning:"):
+        message = message[15:]
+        call = CLOGGER.warning
+    else:
+        # Default.
+        call = CLOGGER.info
+
+        if message.startswith("stdout"):
+            message = message[6:]
+
+    call(message.strip())
 
 
 def run(netlist):
@@ -94,7 +120,7 @@ cdef class Session:
     cdef NgspiceSession* session
 
     def __cinit__(self):
-        self.session = new NgspiceSession()
+        self.session = new NgspiceSession(<LogHandler> _log_handler)
 
     def __dealloc__(self):
         del self.session
@@ -119,6 +145,7 @@ cdef class Session:
             be read from and left open. If a path is passed, it will be opened, read from, then
             closed.
         """
+        LOGGER.debug("Circuit lines:")
         lines = []
         for line in file_lines(netlist_file):
             line = line.strip()
@@ -126,7 +153,7 @@ cdef class Session:
             if not line or line.startswith("*"):
                 continue
 
-            LOGGER.debug(repr(line))
+            LOGGER.debug(f"  {repr(line)}")
             lines.append(line)
 
         if not lines:
@@ -135,7 +162,6 @@ cdef class Session:
             raise ValueError("Missing .end statement in netlist.")
 
         cdef string cscript = "\n".join(lines).encode()
-
         self.session.reinit()
         return self.session.read_netlist(cscript)
 
