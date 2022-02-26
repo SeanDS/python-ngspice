@@ -46,6 +46,8 @@ bool NgspiceSession::read_netlist(const string& netlist) {
     lines.push_back(nullptr); // ngSpice_Circ wants a null-terminated array.
     ngSpice_Circ(lines.data());
 
+    // Use of strdup above to satisfy ngSpice_Circ's required type requires freeing of memory on
+    // the heap.
     for( auto line : lines ) {
         free(line);
     }
