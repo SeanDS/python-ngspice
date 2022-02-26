@@ -8,7 +8,6 @@ from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libcpp.complex cimport complex
 from cpython cimport PyObject, Py_INCREF
-from cython.operator cimport dereference
 import numpy as np
 cimport numpy as np
 from .data import Solution, Vector
