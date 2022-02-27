@@ -3,12 +3,10 @@
 from io import StringIO
 import logging
 import warnings
-from libc.stdlib cimport free
 from libcpp cimport bool
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libcpp.complex cimport complex
-from cpython cimport PyObject, Py_INCREF
 import numpy as np
 cimport numpy as np
 from .data import Solution, Vector
