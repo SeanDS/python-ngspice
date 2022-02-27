@@ -187,12 +187,12 @@ cdef class Session:
     def vectors(self, plot_name):
         cdef string cname = plot_name.encode()
         cdef vector[PlotVector] cvectors = self.session.plot_vectors(cname)
-        vectors = []
+        vectors = {}
 
         for i in range(cvectors.size()):
             name = cvectors[i].name.decode()
             data = self._vector_array(plot_name, name, cvectors[i].real)
-            vectors.append(Vector(name=name, data=data))
+            vectors[name] = Vector(name=name, data=data)
 
         return vectors
 
