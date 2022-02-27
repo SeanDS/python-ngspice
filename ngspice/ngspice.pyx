@@ -136,6 +136,8 @@ cdef class Session:
             be read from and left open. If a path is passed, it will be opened, read from, then
             closed.
         """
+        cdef int status
+
         LOGGER.debug("Circuit lines:")
         lines = []
         for line in file_lines(netlist_file):
@@ -154,7 +156,14 @@ cdef class Session:
 
         cdef string cscript = "\n".join(lines).encode()
         self.session.reinit()
-        return self.session.read_netlist(cscript)
+
+        try:
+            status = self.session.read_netlist(cscript)
+        except Exception as err:
+            self.session.reinit()
+            raise SimulationError(err) from err
+
+        return status
 
     def run(self):
         """Run ngspice (blocking).
@@ -164,7 +173,14 @@ cdef class Session:
         :class:`int`
             True if the simulation ran successfully, False otherwise.
         """
-        cdef int status = self.session.run()
+        cdef int status
+
+        try:
+            status = self.session.run()
+        except Exception as err:
+            self.session.reinit()
+            raise SimulationError(err) from err
+
         return status
 
     def solutions(self):
@@ -185,87 +201,39 @@ cdef class Session:
         return solutions
 
     def vectors(self, plot_name):
-        cdef string cname = plot_name.encode()
-        cdef vector[PlotVector] cvectors = self.session.plot_vectors(cname)
+        cdef string cplot_name = plot_name.encode()
+        cdef vector[PlotVector] cvectors = self.session.plot_vectors(cplot_name)
         vectors = {}
 
         for i in range(cvectors.size()):
             name = cvectors[i].name.decode()
-            data = self._vector_array(plot_name, name, cvectors[i].real)
+            data = self._vector_array(cplot_name, cvectors[i].name, cvectors[i].real)
             vectors[name] = Vector(name=name, data=data)
 
         return vectors
 
-    def _vector_array(self, plot_name, vector_name, is_real):
-        cdef string analysis = <string> plot_name.encode()
-        cdef string vector = <string> vector_name.encode()
-
-        array_wrapper = _ArrayWrapper()
-
-        try:
-            array_wrapper.fill(self.session, analysis, vector, is_real)
-        except IndexError as err:
-            path = f"{plot_name}.{vector_name}"
-            raise KeyError(f"Vector {repr(path)} not found") from err
-
-        cdef np.ndarray ndarray = np.array(array_wrapper, copy=False)
-
-        # Assign our object to the 'base' of the ndarray object.
-        ndarray.base = <PyObject*> array_wrapper
-
-        # Increment the reference count, as the above assignement was done in C, and Python does not
-        # know that there is this additional reference
-        Py_INCREF(array_wrapper)
-
-        return ndarray
-
-
-cdef class _ArrayWrapper:
-    """A means of providing pre-existing memory to a new numpy array without copies.
-
-    The NgspiceSession object holds its data in a std::vector which gets held in memory for the
-    lifetime of the object. This class holds a reference to a particular array (a std::vector) in
-    the object and provides an interface to create a numpy array from it. Encapsulating the
-    reference in this way allows the referenced to the memory used for the numpy array to be kept
-    as long as the numpy array is kept in memory.
-
-    The NgspiceSession handles the deallocation of the underlying data itself.
-
-    Some background:
-      - https://gist.github.com/GaelVaroquaux/1249305
-      - Original blog post, no longer available on the original website:
-        http://web.archive.org/web/20160321001549/http://blog.enthought.com/python/numpy-arrays-with-pre-allocated-memory/#.Vu89PlSnxhE
-    """
-
-    cdef void* dataptr
-    cdef int length
-    cdef int typenum
-
-    cdef fill(self, NgspiceSession* session, string analysis_type, string vector_name, is_real) except +:
-        """Set the data of the array.
-
-        This cannot be done in the constructor as it must recieve C-level arguments.
-
-        Raises
-        ------
-        IndexError
-            When a key doesn't match.
-        """
-        if is_real:
-            self.dataptr = <void*> session.plot_vector(analysis_type, vector_name).data_real.data()
-            self.length = session.plot_vector(analysis_type, vector_name).data_real.size()
-            self.typenum = np.NPY_DOUBLE
-        else:
-            self.dataptr = <void*> session.plot_vector(analysis_type, vector_name).data_complex.data()
-            self.length = session.plot_vector(analysis_type, vector_name).data_complex.size()
-            self.typenum = np.NPY_CDOUBLE
-
-    def __array__(self):
+    cdef np.ndarray _vector_array(self, string analysis, string vector, bool is_real):
+        cdef np.ndarray array
         cdef np.npy_intp shape[1]
-        shape[0] = <np.npy_intp> self.length
 
-        # Create a 1D array with the required length.
-        return np.PyArray_SimpleNewFromData(1, shape, self.typenum, self.dataptr)
+        if is_real:
+            shape[0] = <np.npy_intp> self.session.plot_vector(analysis, vector).data_real.size()
+            array = np.PyArray_SimpleNewFromData(
+                1,
+                shape,
+                np.NPY_DOUBLE,
+                self.session.plot_vector(analysis, vector).data_real.data()
+            )
+        else:
+            shape[0] = <np.npy_intp> self.session.plot_vector(analysis, vector).data_complex.size()
+            array = np.PyArray_SimpleNewFromData(
+                1,
+                shape,
+                np.NPY_CDOUBLE,
+                self.session.plot_vector(analysis, vector).data_complex.data()
+            )
+
+        return np.array(array, copy=True)
 
 
 class SimulationError(Exception):
