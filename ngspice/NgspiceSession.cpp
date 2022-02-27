@@ -2,7 +2,7 @@
 
 using namespace std;
 
-NgspiceSession::NgspiceSession(LogHandler log_handler) : log_handler(log_handler) {
+NgspiceSession::NgspiceSession(MessageHandler message_handler) : message_handler(message_handler) {
     bool success;
 
     success = ngSpice_Init(
@@ -15,7 +15,7 @@ NgspiceSession::NgspiceSession(LogHandler log_handler) : log_handler(log_handler
         this
     ) == 0;
 
-    success &= command("reset");
+    //success &= command("reset");
 
     if (!success) {
         throw std::runtime_error("Could not initialise ngspice");
@@ -159,19 +159,34 @@ void NgspiceSession::_add_ngspice_data(vecvaluesall* vinfo) {
     }
 }
 
-void NgspiceSession::log(std::string message) {
-    (*log_handler)(message);
+void NgspiceSession::emit_message(std::string message) {
+    //printf("cmsg: '%s'\n", message.c_str());
+
+    // Prefix search terms.
+    std::string stderr_prefix("stderr ");
+    std::string mif_error_prefix("stdout MIF-ERROR - ");
+
+    if (!message.compare(0, stderr_prefix.size(), stderr_prefix)) {
+        // Error on stderr.
+        throw std::runtime_error(message.substr(stderr_prefix.size()));
+    } else if (!message.compare(0, mif_error_prefix.size(), mif_error_prefix)) {
+        // MIF-ERROR on stdout.
+        throw std::runtime_error(message.substr(mif_error_prefix.size()));
+    } else {
+        // Call the message handler.
+        (*message_handler)(message);
+    }
 }
 
 int NgspiceSession::cb_send_char(char* aWhat, int aId, void* aUser) {
     NgspiceSession* sim = reinterpret_cast<NgspiceSession*>(aUser);
-    sim->log((std::string) aWhat);
+    sim->emit_message((std::string) aWhat);
     return 0;
 }
 
 int NgspiceSession::cb_send_status(char* aWhat, int aId, void* aUser) {
     NgspiceSession* sim = reinterpret_cast<NgspiceSession*>(aUser);
-    sim->log((std::string) aWhat);
+    sim->emit_message((std::string) aWhat);
     return 0;
 }
 

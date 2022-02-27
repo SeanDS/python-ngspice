@@ -13,7 +13,7 @@
 #include <ngspice/sharedspice.h>
 
 
-typedef void (*LogHandler)(std::string);
+typedef void (*MessageHandler)(std::string);
 
 
 /**
@@ -62,7 +62,7 @@ public:
  */
 class NgspiceSession {
 public:
-    NgspiceSession(LogHandler log_handler);
+    NgspiceSession(MessageHandler message_handler);
     virtual ~NgspiceSession();
 
     bool init();
@@ -81,10 +81,10 @@ public:
     void _add_ngspice_plot(vecinfoall*);
     void _add_ngspice_data(vecvaluesall*);
 
-    void log(std::string message);
+    void emit_message(std::string message);
 
 private:
-    LogHandler log_handler;
+    MessageHandler message_handler;
 
     // Ngspice simulation plot and vector data storage; `plots` is keyed by plot
     // type (e.g. 'op1'), `plot_vectors` is keyed by plot type then vector name

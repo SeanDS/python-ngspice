@@ -2,6 +2,7 @@
 
 from io import StringIO
 import logging
+import warnings
 from libc.stdlib cimport free
 from libcpp cimport bool
 from libcpp.string cimport string
@@ -24,7 +25,7 @@ CLOGGER = logging.getLogger(f"{__name__}.lib")
 
 
 cdef extern from "NgspiceSession.h":
-    ctypedef void (*LogHandler)(string)
+    ctypedef void (*MessageHandler)(string)
 
     cdef cppclass PlotVector:
         PlotVector(int, string, bool) except +
@@ -41,42 +42,32 @@ cdef extern from "NgspiceSession.h":
         string type
 
     cdef cppclass NgspiceSession:
-        NgspiceSession(LogHandler log_handler) except +
-        void init()
+        NgspiceSession(MessageHandler log_handler) except +
         void reinit()
-        bool run()
+        bool run() except +
         bool run_async()
         bool stop_async()
         bool is_running_async()
-        bool command(string)
-        bool read_netlist(string)
-        void print_data()
+        bool command(string) except +
+        bool read_netlist(string) except +
         vector[PlotInfo] plots()
         vector[PlotVector] plot_vectors(string plot_name)
         PlotVector plot_vector(const string&, const string&)
 
 
-cdef _log_handler(string cmessage):
+cdef void _message_handler(string cmessage):
     message = cmessage.decode()
 
-    # Assign the message a relevant log level.
-    if message.startswith("stderr Fatal error:"):
-        message = message[19:]
-        call = CLOGGER.critical
-    elif message.startswith("stderr Error:"):
-        message = message[13:]
-        call = CLOGGER.error
-    elif message.startswith("stderr Warning:"):
-        message = message[15:]
-        call = CLOGGER.warning
+    if message.startswith("stderr Warning: "):
+        # Emit warning.
+        message = message[16:]
+        warnings.warn(message)
     else:
-        # Default.
-        call = CLOGGER.info
+        if message.startswith("stdout "):
+            message = message[7:]
 
-        if message.startswith("stdout"):
-            message = message[6:]
-
-    call(message.strip())
+        # Emit a log message.
+        CLOGGER.info(message)
 
 
 def run(netlist):
@@ -120,7 +111,7 @@ cdef class Session:
     cdef NgspiceSession* session
 
     def __cinit__(self):
-        self.session = new NgspiceSession(<LogHandler> _log_handler)
+        self.session = new NgspiceSession(<MessageHandler> _message_handler)
 
     def __dealloc__(self):
         del self.session
@@ -174,7 +165,6 @@ cdef class Session:
             True if the simulation ran successfully, False otherwise.
         """
         cdef int status = self.session.run()
-        self.session.print_data()
         return status
 
     def solutions(self):
