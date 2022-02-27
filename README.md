@@ -1,7 +1,8 @@
-# pyngspice
-`pyngspice` is a simple Python wrapper for running [ngspice](ngspice.sourceforge.net/) simulations
-and extracting outputs as Numpy arrays. It wraps ngspice as a static library so it does not need to
-be available on the system, and no configuration is needed.
+# Ngspice for Python
+This is a Python package for running [ngspice](ngspice.sourceforge.net/) simulations and extracting
+output. It wraps ngspice as a static library so it does not need to be available on the system, and
+no configuration is needed. Output data are provided as numpy arrays. The library is fast, using
+[Cython](https://cython.readthedocs.io/) to perform low-level interaction with ngspice.
 
 ## Requirements
 In terms of system dependencies, only Python 3.8+ is required to install and run `pyngspice`.
