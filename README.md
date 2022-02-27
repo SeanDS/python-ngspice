@@ -1,25 +1,25 @@
-# python-ngspice
-`python-ngspice` is a simple Python wrapper for running [ngspice](ngspice.sourceforge.net/)
-simulations and extracting outputs as Numpy arrays. It wraps ngspice as a static library so it does
-not need to be available on the system, and no configuration is needed.
+# pyngspice
+`pyngspice` is a simple Python wrapper for running [ngspice](ngspice.sourceforge.net/) simulations
+and extracting outputs as Numpy arrays. It wraps ngspice as a static library so it does not need to
+be available on the system, and no configuration is needed.
 
 ## Requirements
-In terms of system dependencies, only Python 3.8+ is required to install and run `python-ngspice`.
+In terms of system dependencies, only Python 3.8+ is required to install and run `pyngspice`.
 Numpy is also required as a Python dependency; this gets installed automatically if you use a
 packaging tool like pip.
 
 For most users, running the following from a console is all that is needed:
 
 ```console
-$ pip install git+https://github.com/SeanDS/python-ngspice.git
+$ pip install git+https://github.com/SeanDS/pyngspice.git
 ```
 
-To build `python-ngspice` yourself, you will also need the `ngspice` development header files, and a
+To build `pyngspice` yourself, you will also need the `ngspice` development header files, and a
 few more Python dependencies (also automatically installed during the build). Building can then be
 done by running `pip install .` from your local working copy of the project's git repository.
 
 ## Usage
-`python-ngspice` provides `run` and `run_file` functions to run netlist strings and files,
+`pyngspice` provides `run` and `run_file` functions to run netlist strings and files,
 respectively. These return a dictionary containing solutions for the analyses defined in the
 netlist.
 
@@ -58,10 +58,11 @@ v1#branch   -3.33e-04
 
 ## Contributing
 Bug reports and feature requests are always welcome, as are code contributions. Please use the
-project's [issue tracker](https://github.com/SeanDS/python-ngspice/issues).
+project's [issue tracker](https://github.com/SeanDS/pyngspice/issues).
 
 ## Credits
-Sean Leavey <https://github.com/SeanDS/>
+Sean Leavey  
+<https://github.com/SeanDS/>
 
 Some code for interfacing with ngspice based on KiCad, licenced under GPL. Ngspice has various
 licences. All adapted and statically linked code is compatible with this project's BSD licence.
