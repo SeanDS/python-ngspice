@@ -21,10 +21,19 @@ jobs:
           - "3.10"
 
     steps:
-    - name: Install libngspice development files
+    # ngspice is not available as a prebuilt package on Debian 9, which is what manylinux_2_24 uses.
+    # This uses the Debian repo for ngspice, which has better tagging than the official one :-/.
+    - name: Build and install libngspice development files
       run: |
         apt-get update
-        apt-get install -y libngspice0-dev
+        apt-get install -y gcc bison flex libtool autoconf automake
+        cd /tmp
+        git clone git@salsa.debian.org:electronics-team/ngspice.git
+        git checkout debian/bullseye
+        chmod +x autogen.sh compile_linux_shared.sh
+        ./autogen.sh
+        if [ $? -ne 0 ]; then  echo "./autogen.sh failed"; exit 1 ; fi
+        ./compile_linux_shared.sh --enable-relpath
 
     - name: Get source code
       uses: actions/checkout@v2
