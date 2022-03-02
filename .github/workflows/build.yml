@@ -1,0 +1,52 @@
+name: Build python-ngspice
+
+on: [push]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-linux:
+    name: Build for Python ${{ matrix.python-version }} on Linux
+    runs-on: ubuntu-latest
+    container: quay.io/pypa/manylinux2014_x86_64
+
+    strategy:
+      matrix:
+        python-version:
+          - "3.8"
+          - "3.9"
+          - "3.10"
+
+    steps:
+    - name: Install ngspice
+      run: |
+        yum install ngspice
+        ngspice --version
+
+    steps:
+    - name: Get source code
+      uses: actions/checkout@v2
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Create packages
+      run: |
+        python -m pip install build
+        python -m build
+
+    - name: Delocate shared objects
+      run: auditwheel repair dist/*.whl
+
+    - name: Remove Linux wheel
+      run: rm dist/*-linux*.whl
+
+    - name: Archive dist artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: dist-linux-${{ matrix.python-version }}
+        path: dist
