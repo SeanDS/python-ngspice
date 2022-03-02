@@ -10,7 +10,7 @@ jobs:
   build-linux:
     name: Build for Python ${{ matrix.python-version }} on Linux
     runs-on: ubuntu-latest
-    container: quay.io/pypa/manylinux2014_x86_64
+    container: quay.io/pypa/manylinux_2_24_x86_64
 
     strategy:
       fail-fast: false
@@ -21,11 +21,10 @@ jobs:
           - "3.10"
 
     steps:
-    - name: Install ngspice
+    - name: Install libngspice development files
       run: |
-        yum clean all
-        yum install -y ngspice
-        ngspice --version
+        apt-get update
+        apt-get install -y libngspice0-dev
 
     - name: Get source code
       uses: actions/checkout@v2
