@@ -22,7 +22,7 @@ bool NgspiceSession::init() {
     m_ngspice = dlopen("libngspice.so", RTLD_NOW);
 
     if (m_ngspice == nullptr) {
-        throw runtime_error("Could not find libngspice.so");
+        throw runtime_error(dlerror());
     }
 
     m_error = false;
