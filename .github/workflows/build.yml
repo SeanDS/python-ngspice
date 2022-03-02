@@ -22,7 +22,8 @@ jobs:
     steps:
     - name: Install ngspice
       run: |
-        yum install ngspice
+        yum check-update
+        yum install -y ngspice
         ngspice --version
 
     - name: Get source code
