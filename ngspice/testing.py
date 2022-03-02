@@ -1,8 +1,18 @@
 """Testing tools."""
 
+from textwrap import dedent
 from itertools import zip_longest
 import numpy as np
 from .data import Solution, Vector
+
+
+def dedent_multiline(text):
+    """Dedent multiline text, stripping preceding and succeeding newlines.
+
+    This is useful for specifying multiline strings in tests without having to compensate for the
+    indentation.
+    """
+    return dedent(text).strip()
 
 
 def assert_solutions_equal(solution1, solution2):
