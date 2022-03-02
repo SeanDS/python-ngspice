@@ -13,6 +13,7 @@ jobs:
     container: quay.io/pypa/manylinux2014_x86_64
 
     strategy:
+      fail-fast: false
       matrix:
         python-version:
           - "3.8"
@@ -22,7 +23,7 @@ jobs:
     steps:
     - name: Install ngspice
       run: |
-        yum check-update
+        yum clean all
         yum install -y ngspice
         ngspice --version
 
