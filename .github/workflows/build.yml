@@ -29,8 +29,9 @@ jobs:
         apt-get install -y gcc bison flex libtool autoconf automake git
         cd /tmp
         git clone https://salsa.debian.org/electronics-team/ngspice.git
+        cd ngspice
         git checkout debian/bullseye
-        chmod +x autogen.sh compile_linux_shared.sh
+        chmod +x compile_linux_shared.sh
         ./autogen.sh
         if [ $? -ne 0 ]; then  echo "./autogen.sh failed"; exit 1 ; fi
         ./compile_linux_shared.sh --enable-relpath
