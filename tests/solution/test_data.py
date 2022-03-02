@@ -2,7 +2,7 @@
 
 import numpy as np
 from ngspice import run
-from ..util import dedent_multiline
+from ngspice.testing import dedent_multiline
 
 
 def test_data_type():
