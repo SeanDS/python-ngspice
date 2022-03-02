@@ -47,7 +47,7 @@ jobs:
         ${{ env.python }} -m build -o dist --wheel
 
     - name: Delocate shared objects
-      run: ${{ env.python }} -m auditwheel repair -w wheelhouse dist/*.whl
+      run: auditwheel repair -w wheelhouse dist/*.whl
 
     - name: Archive dist artifacts
       uses: actions/upload-artifact@v2
