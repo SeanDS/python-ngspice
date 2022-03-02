@@ -36,13 +36,13 @@ jobs:
         if [ $? -ne 0 ]; then  echo "./autogen.sh failed"; exit 1 ; fi
         ./compile_linux_shared.sh --enable-relpath
 
-    # Get source code.
-    - uses: actions/checkout@v2
+    - name: Get source code
+      uses: actions/checkout@v2
 
-    - name: Create packages
+    - name: Create wheel
       run: |
         python${{ matrix.python-version }} -m pip install build
-        python${{ matrix.python-version }} -m build
+        python${{ matrix.python-version }} -m build -o dist --wheel
 
     - name: Delocate shared objects
       run: auditwheel repair dist/*.whl
