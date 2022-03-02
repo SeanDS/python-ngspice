@@ -3,9 +3,37 @@
 using namespace std;
 
 NgspiceSession::NgspiceSession(MessageHandler message_handler) : message_handler(message_handler) {
+    init();
+}
+
+NgspiceSession::~NgspiceSession() {
+    dlclose(m_ngspice);
+}
+
+bool NgspiceSession::init() {
     bool success;
 
-    success = ngSpice_Init(
+    // Close any existing object.
+    if (m_ngspice != nullptr) {
+        dlclose(m_ngspice);
+    }
+
+    // Load the DLL.
+    m_ngspice = dlopen("/usr/lib/libngspice.so", RTLD_NOW);
+
+    if (m_ngspice == nullptr) {
+        throw std::runtime_error("Could not find/initialise libngspice");
+    }
+
+    m_error = false;
+
+    // Assign functions.
+    m_ngSpice_Init = (ngSpice_Init) dlsym(m_ngspice, "ngSpice_Init");
+    m_ngSpice_Circ = (ngSpice_Circ) dlsym(m_ngspice, "ngSpice_Circ");
+    m_ngSpice_Command = (ngSpice_Command) dlsym(m_ngspice, "ngSpice_Command");
+    m_ngSpice_Running = (ngSpice_Running) dlsym(m_ngspice, "ngSpice_running");  // Not a typo.
+
+    success = m_ngSpice_Init(
         &cb_send_char,
         &cb_send_status,
         &cb_controlled_exit,
@@ -15,26 +43,26 @@ NgspiceSession::NgspiceSession(MessageHandler message_handler) : message_handler
         this
     ) == 0;
 
-    //success &= command("reset");
+    // Workarounds to avoid crashes on certain errors.
+    success &= command("unset interactive");
+    success &= command("set noaskquit");
+    success &= command("set nomoremode");
 
     if (!success) {
-        throw std::runtime_error("Could not initialise ngspice");
+        throw std::runtime_error("Could not initialize simulation");
+    }
+
+    return success;
+}
+
+void NgspiceSession::validate() {
+    if (m_error) {
+        init();
     }
 }
 
-NgspiceSession::~NgspiceSession() {
-
-}
-
-bool NgspiceSession::reinit() {
-    // FIXME: causes segfault
-    // plot_info_map.clear();
-    // current_plot_name = nullptr;
-    // plot_vector_map.clear();
-    return command("destroy all");
-}
-
 bool NgspiceSession::read_netlist(const string& netlist) {
+    bool status;
     std::vector<char*> lines;
     std::string line;
     stringstream ss(netlist);
@@ -43,16 +71,18 @@ bool NgspiceSession::read_netlist(const string& netlist) {
         lines.push_back(strdup(line.c_str()));
     }
 
-    lines.push_back(nullptr); // ngSpice_Circ wants a null-terminated array.
-    ngSpice_Circ(lines.data());
+    lines.push_back(nullptr);  // ngSpice_Circ wants a null-terminated array.
+    // Parse the script. This return nonzero only in very limited circumstances, so we have to rely
+    // on message parsing in ngspice.pyx to fully detect errors.
+    status = m_ngSpice_Circ(lines.data()) == 0;
 
-    // Use of strdup above to satisfy ngSpice_Circ's required type requires freeing of memory on
-    // the heap.
+    // The ngSpice_Circ command requires a char** which necessitates strdup for each line. These get
+    // allocated on the heap so need manually freed.
     for( auto line : lines ) {
         free(line);
     }
 
-    return true;
+    return status;
 }
 
 bool NgspiceSession::run() {
@@ -60,19 +90,33 @@ bool NgspiceSession::run() {
 }
 
 bool NgspiceSession::run_async() {
+    bool success = start();
+
+    if (success) {
+        // Wait for end of simulation.
+        do {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        } while(running());
+    }
+
+    return success;
+}
+
+bool NgspiceSession::start() {
     return command("bg_run");
 }
 
-bool NgspiceSession::stop_async() {
+bool NgspiceSession::stop() {
     return command("bg_halt");
 }
 
-bool NgspiceSession::is_running_async() {
-    return ngSpice_running();
+bool NgspiceSession::running() {
+    return m_ngSpice_Running();
 }
 
 bool NgspiceSession::command(const string& command) {
-    return ngSpice_Command((char*) command.c_str()) == 0;
+    validate();
+    return m_ngSpice_Command((char*) command.c_str()) == 0;
 }
 
 std::vector<PlotInfo> NgspiceSession::plots() {
@@ -83,6 +127,10 @@ std::vector<PlotInfo> NgspiceSession::plots() {
     }
 
     return plots;
+}
+
+PlotInfo& NgspiceSession::plot(const std::string& plot_type) {
+    return plot_info_map.at(plot_type);
 }
 
 std::vector<PlotVector> NgspiceSession::plot_vectors(const std::string& plot_type) {
@@ -160,20 +208,20 @@ void NgspiceSession::_add_ngspice_data(vecvaluesall* vinfo) {
 }
 
 void NgspiceSession::emit_message(std::string message) {
-    //printf("cmsg: '%s'\n", message.c_str());
-
     // Prefix search terms.
     std::string stderr_prefix("stderr ");
     std::string mif_error_prefix("stdout MIF-ERROR - ");
 
     if (!message.compare(0, stderr_prefix.size(), stderr_prefix)) {
         // Error on stderr.
+        m_error = true;
         throw std::runtime_error(message.substr(stderr_prefix.size()));
     } else if (!message.compare(0, mif_error_prefix.size(), mif_error_prefix)) {
         // MIF-ERROR on stdout.
+        m_error = true;
         throw std::runtime_error(message.substr(mif_error_prefix.size()));
     } else {
-        // Call the message handler.
+        // Forward the message to the registered handler.
         (*message_handler)(message);
     }
 }
@@ -195,6 +243,14 @@ int NgspiceSession::cb_background_thread_running(bool aFinished, int aId, void* 
 }
 
 int NgspiceSession::cb_controlled_exit(int aStatus, bool aImmediate, bool aExitOnQuit, int aId, void* aUser) {
+    // Set the error flag, which will force a reload of the DLL.
+    NgspiceSession* sim = reinterpret_cast<NgspiceSession*>(aUser);
+    sim->m_error = true;
+
+    std::ostringstream ss;
+    ss << "Ngspice exiting with status " << aStatus;
+    sim->emit_message(ss.str());
+
     return 0;
 }
 

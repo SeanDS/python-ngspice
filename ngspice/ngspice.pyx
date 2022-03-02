@@ -2,18 +2,17 @@
 
 from io import StringIO
 import logging
-import warnings
 from libcpp cimport bool
 from libcpp.string cimport string
 from libcpp.vector cimport vector
 from libcpp.complex cimport complex
 import numpy as np
 cimport numpy as np
-from .data import Solution, Vector
+from .data import Solution, Vector, SimulationType
 from .util import file_lines
 
 
-# Initialise numpy. When using numpy from C or Cython we must always do this, otherwise there will
+# Initialize numpy. When using numpy from C or Cython we must always do this, otherwise there will
 # be segfaults.
 np.import_array()
 
@@ -41,11 +40,8 @@ cdef extern from "NgspiceSession.h":
 
     cdef cppclass NgspiceSession:
         NgspiceSession(MessageHandler log_handler) except +
-        void reinit()
+        bool init() except +
         bool run() except +
-        bool run_async()
-        bool stop_async()
-        bool is_running_async()
         bool command(string) except +
         bool read_netlist(string) except +
         vector[PlotInfo] plots()
@@ -59,7 +55,7 @@ cdef void _message_handler(string cmessage):
     if message.startswith("stderr Warning: "):
         # Emit warning.
         message = message[16:]
-        warnings.warn(message)
+        CLOGGER.warning(message)
     else:
         if message.startswith("stdout "):
             message = message[7:]
@@ -122,7 +118,7 @@ cdef class Session:
         netlist : str
             The netlist to read.
         """
-        return self.read_file(StringIO(netlist))
+        self.read_file(StringIO(netlist))
 
     def read_file(self, netlist_file):
         """Read netlist from file.
@@ -134,7 +130,7 @@ cdef class Session:
             be read from and left open. If a path is passed, it will be opened, read from, then
             closed.
         """
-        cdef int status
+        cdef bool success
 
         LOGGER.debug("Circuit lines:")
         lines = []
@@ -153,33 +149,36 @@ cdef class Session:
             raise ValueError("Missing .end statement in netlist.")
 
         cdef string cscript = "\n".join(lines).encode()
-        self.session.reinit()
 
         try:
-            status = self.session.read_netlist(cscript)
-        except Exception as err:
-            self.session.reinit()
+            success = self.session.read_netlist(cscript)
+        except RuntimeError as err:
+            # Reraise error from ngspice as a simulation error.
+            self.session.init()  # Session may have crashed.
             raise SimulationError(err) from err
-
-        return status
+        else:
+            if not success:
+                # An error made its way through the message handler. This is only reached in very
+                # limited circumstances; the majority of parse errors have to be caught by the
+                # message handler.
+                self.session.init()  # Session may have crashed.
+                raise SimulationError("Unknown error reading netlist")
 
     def run(self):
-        """Run ngspice (blocking).
-
-        Returns
-        -------
-        :class:`int`
-            True if the simulation ran successfully, False otherwise.
-        """
-        cdef int status
+        """Run ngspice (blocking)."""
+        cdef int success
 
         try:
-            status = self.session.run()
-        except Exception as err:
-            self.session.reinit()
+            success = self.session.run()
+        except RuntimeError as err:
+            # Reraise error from ngspice as a simulation error.
+            self.session.init()  # Session may have crashed.
             raise SimulationError(err) from err
-
-        return status
+        else:
+            if not success:
+                # An error made its way through the message handler.
+                self.session.init()  # Session may have crashed.
+                raise SimulationError("Unknown error running simulation")
 
     def solutions(self):
         cdef vector[PlotInfo] cplots = self.session.plots()
@@ -190,10 +189,12 @@ cdef class Session:
             # What ngspice calls "type" is what we call the name, e.g. "op1". What ngspice calls
             # "name", we call the description, e.g. "DC transfer characteristic".
             name = cplots[i].type.decode()
-            description = cplots[i].name.decode()
             vectors = self.vectors(name)
+
             # The type is parsed from the description.
-            solution = Solution(name=name, type=description, vectors=vectors)
+            simtype = SimulationType.from_description(cplots[i].name.decode())
+
+            solution = Solution(name=name, type=simtype, vectors=vectors)
             solutions[solution.name] = solution
 
         return solutions
