@@ -55,7 +55,7 @@ class Solution:
 
     name: str
     type: SimulationType
-    vectors: dict[str, Vector]
+    vectors: dict
 
     @property
     def row_names(self):
