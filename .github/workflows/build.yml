@@ -28,7 +28,7 @@ jobs:
         apt-get update
         apt-get install -y gcc bison flex libtool autoconf automake git
         cd /tmp
-        git clone git@salsa.debian.org:electronics-team/ngspice.git
+        git clone https://salsa.debian.org/electronics-team/ngspice.git
         git checkout debian/bullseye
         chmod +x autogen.sh compile_linux_shared.sh
         ./autogen.sh
