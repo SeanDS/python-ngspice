@@ -25,7 +25,6 @@ jobs:
         yum install ngspice
         ngspice --version
 
-    steps:
     - name: Get source code
       uses: actions/checkout@v2
 
