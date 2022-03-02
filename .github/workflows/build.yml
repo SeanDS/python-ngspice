@@ -81,6 +81,14 @@ jobs:
     - name: Install wheel
       run: |
         ${{ env.python }} -m pip install wheelhouse/*.whl
+        ${{ env.python }} -m pip list | grep ngspice
+
+    - name: Get source code
+      uses: actions/checkout@v2
+
+    - name: Remove everything except tests
+      run: |
+        find . -mindepth 1 -maxdepth 1 -type d -not -name tests -exec echo rm -rf '{}' \;
 
     - name: Run tests
       run: |
