@@ -11,6 +11,8 @@ jobs:
     name: Build for Python ${{ matrix.python-version }} on Linux
     runs-on: ubuntu-latest
     container: quay.io/pypa/manylinux_2_24_x86_64
+    env:
+      python: python${{ matrix.python-version }}
 
     strategy:
       fail-fast: false
@@ -41,14 +43,14 @@ jobs:
 
     - name: Create wheel
       run: |
-        python${{ matrix.python-version }} -m pip install build
-        python${{ matrix.python-version }} -m build -o dist --wheel
+        ${{ env.python }} -m pip install build
+        ${{ env.python }} -m build -o dist --wheel
 
     - name: Delocate shared objects
-      run: auditwheel repair -w wheelhouse dist/*.whl
+      run: ${{ env.python }} -m auditwheel repair -w wheelhouse dist/*.whl
 
     - name: Archive dist artifacts
       uses: actions/upload-artifact@v2
       with:
-        name: dist-linux-${{ matrix.python-version }}
+        name: "*.whl"
         path: wheelhouse
