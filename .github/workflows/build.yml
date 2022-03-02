@@ -36,8 +36,8 @@ jobs:
         if [ $? -ne 0 ]; then  echo "./autogen.sh failed"; exit 1 ; fi
         ./compile_linux_shared.sh --enable-relpath
 
-    - name: Get source code
-      uses: actions/checkout@v2
+    # Get source code.
+    - uses: actions/checkout@v2
 
     - name: Create packages
       run: |
@@ -48,7 +48,7 @@ jobs:
       run: auditwheel repair dist/*.whl
 
     - name: Remove Linux wheel
-      run: rm dist/*-linux*.whl
+      run: rm dist/*-linux_*.whl
 
     - name: Archive dist artifacts
       uses: actions/upload-artifact@v2
