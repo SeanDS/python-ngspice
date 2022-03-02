@@ -9,7 +9,7 @@ setup(
                 "ngspice.ngspice",
                 ["ngspice/ngspice.pyx", "ngspice/NgspiceSession.cpp"],
                 libraries=["ngspice"],  # Dynamically loaded at runtime by NgspiceSession.cpp.
-                runtime_library_dirs=["$ORIGIN/../ngspice.libs"],
+                runtime_library_dirs=["\$ORIGIN/../ngspice.libs"],
                 include_dirs=[np.get_include()],
                 language="c++"
             )
