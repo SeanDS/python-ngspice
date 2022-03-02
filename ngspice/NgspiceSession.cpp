@@ -19,10 +19,10 @@ bool NgspiceSession::init() {
     }
 
     // Load the DLL.
-    m_ngspice = dlopen("/usr/lib/libngspice.so", RTLD_NOW);
+    m_ngspice = dlopen("libngspice.so", RTLD_NOW);
 
     if (m_ngspice == nullptr) {
-        throw runtime_error("Could not find/initialise libngspice");
+        throw runtime_error("Could not find libngspice.so");
     }
 
     m_error = false;
