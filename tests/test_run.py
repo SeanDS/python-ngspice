@@ -9,7 +9,7 @@ from itertools import zip_longest
 import pytest
 from ngspice import run, run_file, SimulationError
 from ngspice.testing import assert_solutions_equal
-from .util import dedent_multiline
+from ngspice.testing import dedent_multiline
 
 
 scripts = pytest.mark.parametrize(

@@ -3,7 +3,7 @@
 import time
 import pytest
 from ngspice import Session, SimulationError
-from .util import dedent_multiline
+from ngspice.testing import dedent_multiline
 
 
 @pytest.fixture
