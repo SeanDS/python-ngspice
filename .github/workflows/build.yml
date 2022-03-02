@@ -45,13 +45,10 @@ jobs:
         python${{ matrix.python-version }} -m build -o dist --wheel
 
     - name: Delocate shared objects
-      run: auditwheel repair dist/*.whl
-
-    - name: Remove Linux wheel
-      run: rm dist/*-linux_*.whl
+      run: auditwheel repair -w wheelhouse dist/*.whl
 
     - name: Archive dist artifacts
       uses: actions/upload-artifact@v2
       with:
         name: dist-linux-${{ matrix.python-version }}
-        path: dist
+        path: wheelhouse
