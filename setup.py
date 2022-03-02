@@ -8,7 +8,8 @@ setup(
             Extension(
                 "ngspice.ngspice",
                 ["ngspice/ngspice.pyx", "ngspice/NgspiceSession.cpp"],
-                runtime_library_dirs=["ngspice"],
+                libraries=["ngspice"],  # Dynamically loaded at runtime by NgspiceSession.cpp.
+                runtime_library_dirs=["$ORIGIN/../ngspice.libs"],
                 include_dirs=[np.get_include()],
                 language="c++"
             )
