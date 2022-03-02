@@ -15,8 +15,10 @@
 #include <thread>
 #include <ngspice/sharedspice.h>
 
+using namespace std;
 
-typedef void (*MessageHandler)(std::string);
+
+typedef void (*MessageHandler)(string);
 
 
 /**
@@ -27,18 +29,17 @@ typedef void (*MessageHandler)(std::string);
  */
 class PlotVector {
 public:
-    PlotVector(int index, std::string name, bool is_real)
-        : index(index), name(name), real(is_real) {}
+    PlotVector(int index, string name, bool is_real) : index(index), name(name), real(is_real) {}
 
     int index;
-    std::string name;
+    string name;
     bool real;
 
     // Use separate variables for real and complex valued vectors so we can pass
     // references to Python. Only one is actually used, depending on the value of
     // `real`.
-    std::vector<double> data_real;
-    std::vector<std::complex<double>> data_complex;
+    vector<double> data_real;
+    vector<complex<double>> data_complex;
 };
 
 /**
@@ -49,12 +50,11 @@ public:
  */
 class PlotInfo {
 public:
-    PlotInfo(std::string name, std::string title, std::string type)
-        : name(name), title(title), type(type) {}
+    PlotInfo(string name, string title, string type) : name(name), title(title), type(type) {}
 
-    std::string name;
-    std::string title;
-    std::string type;
+    string name;
+    string title;
+    string type;
 };
 
 /**
@@ -82,15 +82,15 @@ public:
     bool running();
 
     // Send command to ngspice.
-    bool command(const std::string& command);
+    bool command(const string& command);
     // Read a netlist into ngspice.
-    bool read_netlist(const std::string& netlist);
+    bool read_netlist(const string& netlist);
 
     // Get ngspice output data.
-    std::vector<PlotInfo> plots();
-    PlotInfo& plot(const std::string& plot_type);
-    std::vector<PlotVector> plot_vectors(const std::string& plot_type);
-    PlotVector& plot_vector(const std::string& plot_type, const std::string& vector_name);
+    vector<PlotInfo> plots();
+    PlotInfo& plot(const string& plot_type);
+    vector<PlotVector> plot_vectors(const string& plot_type);
+    PlotVector& plot_vector(const string& plot_type, const string& vector_name);
 
     // Print ngspice output data.
     void print_data();
@@ -100,7 +100,7 @@ public:
     void _add_ngspice_data(vecvaluesall*);
 
     // Send messages from ngspice to the registered handler.
-    void emit_message(std::string message);
+    void emit_message(string message);
 
 private:
     // Ensure ngspice is in a valid state.
@@ -135,9 +135,9 @@ private:
 
     // Ngspice simulation plot and vector data storage; `plots` is keyed by plot type (e.g. 'op1'),
     // `plot_vectors` is keyed by plot type then vector name (e.g. 'n1').
-    std::map<std::string, PlotInfo> plot_info_map;
-    std::string current_plot_name;
-    std::map<std::string, std::map<std::string, PlotVector>> plot_vector_map;
+    map<string, PlotInfo> plot_info_map;
+    string current_plot_name;
+    map<string, map<string, PlotVector>> plot_vector_map;
 };
 
 #endif /* NGSPICESESSION_H */

@@ -22,7 +22,7 @@ bool NgspiceSession::init() {
     m_ngspice = dlopen("/usr/lib/libngspice.so", RTLD_NOW);
 
     if (m_ngspice == nullptr) {
-        throw std::runtime_error("Could not find/initialise libngspice");
+        throw runtime_error("Could not find/initialise libngspice");
     }
 
     m_error = false;
@@ -49,7 +49,7 @@ bool NgspiceSession::init() {
     success &= command("set nomoremode");
 
     if (!success) {
-        throw std::runtime_error("Could not initialize simulation");
+        throw runtime_error("Could not initialize simulation");
     }
 
     return success;
@@ -63,11 +63,11 @@ void NgspiceSession::validate() {
 
 bool NgspiceSession::read_netlist(const string& netlist) {
     bool status;
-    std::vector<char*> lines;
-    std::string line;
+    vector<char*> lines;
+    string line;
     stringstream ss(netlist);
 
-    while (std::getline(ss, line, '\n')) {
+    while (getline(ss, line, '\n')) {
         lines.push_back(strdup(line.c_str()));
     }
 
@@ -95,7 +95,7 @@ bool NgspiceSession::run_async() {
     if (success) {
         // Wait for end of simulation.
         do {
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            this_thread::sleep_for(chrono::milliseconds(50));
         } while(running());
     }
 
@@ -119,8 +119,8 @@ bool NgspiceSession::command(const string& command) {
     return m_ngSpice_Command((char*) command.c_str()) == 0;
 }
 
-std::vector<PlotInfo> NgspiceSession::plots() {
-    std::vector<PlotInfo> plots;
+vector<PlotInfo> NgspiceSession::plots() {
+    vector<PlotInfo> plots;
 
     for (const auto& name_and_plot : plot_info_map) {
         plots.push_back(name_and_plot.second);
@@ -129,12 +129,12 @@ std::vector<PlotInfo> NgspiceSession::plots() {
     return plots;
 }
 
-PlotInfo& NgspiceSession::plot(const std::string& plot_type) {
+PlotInfo& NgspiceSession::plot(const string& plot_type) {
     return plot_info_map.at(plot_type);
 }
 
-std::vector<PlotVector> NgspiceSession::plot_vectors(const std::string& plot_type) {
-    std::vector<PlotVector> plot_vectors;
+vector<PlotVector> NgspiceSession::plot_vectors(const string& plot_type) {
+    vector<PlotVector> plot_vectors;
 
     for (const auto& name_and_vector : plot_vector_map.at(plot_type)) {
         plot_vectors.push_back(name_and_vector.second);
@@ -143,7 +143,7 @@ std::vector<PlotVector> NgspiceSession::plot_vectors(const std::string& plot_typ
     return plot_vectors;
 }
 
-PlotVector& NgspiceSession::plot_vector(const std::string& plot_type, const std::string& vector_name) {
+PlotVector& NgspiceSession::plot_vector(const string& plot_type, const string& vector_name) {
     return plot_vector_map.at(plot_type).at(vector_name);
 }
 
@@ -176,9 +176,9 @@ void NgspiceSession::print_data() {
 
 void NgspiceSession::_add_ngspice_plot(vecinfoall* vinfo) {
     plot_info_map.emplace(
-        std::piecewise_construct, std::make_tuple(std::string(vinfo->type)),
-        std::make_tuple(std::string(vinfo->name), std::string(vinfo->title),
-            std::string(vinfo->type)));
+        piecewise_construct, make_tuple(string(vinfo->type)),
+        make_tuple(string(vinfo->name), string(vinfo->title),
+            string(vinfo->type)));
 
     // Set the current plot name.
     current_plot_name = vinfo->type;
@@ -186,10 +186,10 @@ void NgspiceSession::_add_ngspice_plot(vecinfoall* vinfo) {
     // Create the plot vectors.
     for (int i = 0; i < vinfo->veccount; i++) {
         plot_vector_map[current_plot_name].emplace(
-            std::piecewise_construct,
-            std::make_tuple((std::string)vinfo->vecs[i]->vecname),
-            std::make_tuple(vinfo->vecs[i]->number,
-                (std::string)vinfo->vecs[i]->vecname,
+            piecewise_construct,
+            make_tuple((string)vinfo->vecs[i]->vecname),
+            make_tuple(vinfo->vecs[i]->number,
+                (string)vinfo->vecs[i]->vecname,
                 (bool)vinfo->vecs[i]->is_real));
     }
 }
@@ -207,19 +207,19 @@ void NgspiceSession::_add_ngspice_data(vecvaluesall* vinfo) {
     }
 }
 
-void NgspiceSession::emit_message(std::string message) {
+void NgspiceSession::emit_message(string message) {
     // Prefix search terms.
-    std::string stderr_prefix("stderr ");
-    std::string mif_error_prefix("stdout MIF-ERROR - ");
+    string stderr_prefix("stderr ");
+    string mif_error_prefix("stdout MIF-ERROR - ");
 
     if (!message.compare(0, stderr_prefix.size(), stderr_prefix)) {
         // Error on stderr.
         m_error = true;
-        throw std::runtime_error(message.substr(stderr_prefix.size()));
+        throw runtime_error(message.substr(stderr_prefix.size()));
     } else if (!message.compare(0, mif_error_prefix.size(), mif_error_prefix)) {
         // MIF-ERROR on stdout.
         m_error = true;
-        throw std::runtime_error(message.substr(mif_error_prefix.size()));
+        throw runtime_error(message.substr(mif_error_prefix.size()));
     } else {
         // Forward the message to the registered handler.
         (*message_handler)(message);
@@ -228,13 +228,13 @@ void NgspiceSession::emit_message(std::string message) {
 
 int NgspiceSession::cb_send_char(char* aWhat, int aId, void* aUser) {
     NgspiceSession* sim = reinterpret_cast<NgspiceSession*>(aUser);
-    sim->emit_message((std::string) aWhat);
+    sim->emit_message((string) aWhat);
     return 0;
 }
 
 int NgspiceSession::cb_send_status(char* aWhat, int aId, void* aUser) {
     NgspiceSession* sim = reinterpret_cast<NgspiceSession*>(aUser);
-    sim->emit_message((std::string) aWhat);
+    sim->emit_message((string) aWhat);
     return 0;
 }
 
@@ -247,7 +247,7 @@ int NgspiceSession::cb_controlled_exit(int aStatus, bool aImmediate, bool aExitO
     NgspiceSession* sim = reinterpret_cast<NgspiceSession*>(aUser);
     sim->m_error = true;
 
-    std::ostringstream ss;
+    ostringstream ss;
     ss << "Ngspice exiting with status " << aStatus;
     sim->emit_message(ss.str());
 
