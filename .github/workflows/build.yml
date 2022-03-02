@@ -100,5 +100,8 @@ jobs:
     - name: Get source code
       uses: actions/checkout@v2
 
+    - name: Remove repository package
+      run: rm -r ngspice
+
     - name: Run tests
       run: python -m pytest
