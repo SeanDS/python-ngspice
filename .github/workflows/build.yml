@@ -39,15 +39,10 @@ jobs:
     - name: Get source code
       uses: actions/checkout@v2
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-
     - name: Create packages
       run: |
-        python -m pip install build
-        python -m build
+        python${{ matrix.python-version }} -m pip install build
+        python${{ matrix.python-version }} -m build
 
     - name: Delocate shared objects
       run: auditwheel repair dist/*.whl
