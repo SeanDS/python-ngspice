@@ -82,6 +82,7 @@ jobs:
       run: |
         ${{ env.python }} -m pip install wheelhouse/*.whl
         ${{ env.python }} -m pip list | grep ngspice
+        ${{ env.python }} -c "import ngspice"
 
     - name: Get source code
       uses: actions/checkout@v2
